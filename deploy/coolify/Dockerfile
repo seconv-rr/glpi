@@ -28,3 +28,9 @@ ADD --chown=www-data:www-data \
     /tmp/glpi-mod.tar.gz
 RUN tar --extract --gzip --file=/tmp/glpi-mod.tar.gz --directory=/var/www/glpi/plugins \
     && rm /tmp/glpi-mod.tar.gz
+
+# Portuguese, always and only. The "Default language" setting alone loses to the browser's
+# Accept-Language header on every anonymous page (Session::getPreferredLanguage(),
+# src/Session.php:971) and to each user's own preference; this plugin removes every other
+# locale from $CFG_GLPI['languages'], which is what all of those read. See its README.
+COPY --chown=www-data:www-data plugins/defaultlang /var/www/glpi/plugins/defaultlang

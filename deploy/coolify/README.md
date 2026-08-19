@@ -1,8 +1,8 @@
 # Deploying to Coolify
 
 `Dockerfile` here is the whole build: the official `glpi/glpi` image with the SECONV-RR logos
-copied over GLPI's own and the UI Branding plugin bundled in. Nothing is compiled, so the build
-is a few seconds.
+copied over GLPI's own, the UI Branding plugin, and this repository's `defaultlang` plugin
+bundled in. Nothing is compiled, so the build is a few seconds.
 
 ## Why not build the fork
 
@@ -71,11 +71,20 @@ Then, once, in the container terminal:
 php bin/console plugin:install --username=glpi mod
 php bin/console plugin:activate mod
 printf 'title="SECONV-RR"\nlogin="0"\ntheme_logos="0"\n' > /var/glpi/files/_plugins/mod/modifiers.ini
+
+php bin/console plugin:install --username=glpi defaultlang
+php bin/console plugin:activate defaultlang
 ```
 
-That is all the plugin is there for: `$CFG_GLPI['app_name']`, which drives the browser tab
+That is all the `mod` plugin is there for: `$CFG_GLPI['app_name']`, which drives the browser tab
 title, the footer of notification e-mails, and the issuer label shown by MFA apps. The logos do
 not go through it — they are already in the image.
+
+`defaultlang` lives in this repository (`plugins/defaultlang`) and locks the instance to pt_BR: it
+removes every other locale from `$CFG_GLPI['languages']`, so the browser's `Accept-Language` has
+nothing else to negotiate, the language selector in user preferences offers a single option, and
+the `en_GB` the installer wrote into the `glpi` account is discarded. Nobody gets logged out; the
+language changes on the next page load. See `plugins/defaultlang/README.md` for the two caveats.
 
 > **Do not press "Apply" on any logo in the plugin's UI Branding screen.** It would overwrite the
 > baked-in SECONV-RR files with the plugin's own sample images. `theme_logos="0"` keeps that
