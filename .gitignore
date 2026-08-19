@@ -4,6 +4,8 @@
 !/marketplace/.gitkeep
 /plugins/*
 !/plugins/.gitkeep
+# Written and maintained here, not downloaded from the marketplace.
+!/plugins/defaultlang
 /files/*/*
 !/files/*/.gitkeep
 /.buildpath
