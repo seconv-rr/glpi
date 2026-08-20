@@ -66,6 +66,10 @@ up: ## Start all containers
 	$(COMPOSE) up -d
 .PHONY: start
 
+up-lite: ## Start only app, db and mailpit (skips openldap/dbgate — lighter on the machine)
+	$(COMPOSE) up -d app db mailpit
+.PHONY: up-lite
+
 down: ## Stop the containers
 	$(COMPOSE) down --remove-orphans
 .PHONY: stop
