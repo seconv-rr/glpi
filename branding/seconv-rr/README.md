@@ -10,36 +10,34 @@ arms and the name SECONV-RR.
 | `src/brasao-roraima.png` | Source coat of arms, 924x1024 RGBA, transparent background |
 | `generate-assets.py` | Renders `dist/` from the source. Needs Pillow and Liberation Sans Bold |
 | `dist/` | The nine logo variants plus `favicon.ico`, named exactly as GLPI serves them |
-| `apply.sh` | Copies `dist/` into the plugin and into `public/pics`, and sets the tab title |
+| `apply.sh` | Copies `dist/` over `public/pics` |
 | `git-guard.sh` | Keeps the overwritten GLPI files from showing up as modified, and from blocking pulls |
 
 The logos are laid out as coat of arms on the left, `SECONV-RR` to the right of it.
 
-## The plugin
+## The name
 
-Branding is done by [i-Vertix/glpi-modifications](https://github.com/i-Vertix/glpi-modifications)
-(folder name `mod`, GPL-3.0), which requires GLPI >= 11.0 < 12.0 and PHP >= 8.2. It is **not**
-tracked here: `.gitignore` excludes `plugins/*`, so a fresh clone has to fetch it again.
+The images cover everything visual, but the product name itself is a PHP value —
+`$CFG_GLPI['app_name']`, assigned literally in `src/autoload/CFG_GLPI.php:47` — and it drives the
+browser-tab title, the notification-mail footer and the MFA issuer label. `plugins/appname` sets
+it; see its README. No third-party plugin is involved.
 
-```bash
-curl -sLO https://github.com/i-Vertix/glpi-modifications/releases/download/11.0.5/glpi-mod-11.0.5.tar.gz
-tar -xzf glpi-mod-11.0.5.tar.gz -C plugins/
-```
+> Do **not** install i-Vertix's `mod` (UI Branding) plugin to do this. Its `plugin_mod_activate()`
+> copies its own sample logos over `public/pics`, undoing everything below, and turns the
+> i-Vertix photo background on for the login page.
 
 ## Applying it
 
-Order matters. The plugin's `install()` copies the untouched GLPI logos to
-`files/_plugins/mod/backups`, and that copy is the only thing `Restore` and the uninstall
-routine can put back. Overwriting `public/pics` before it runs destroys the originals.
-
 ```bash
-bin/console plugin:install mod
-bin/console plugin:activate mod
+python3 branding/seconv-rr/generate-assets.py   # only after changing the source or the layout
 ./branding/seconv-rr/apply.sh
 ```
 
-To remove the branding, uninstall the plugin **from the GLPI plugins page** before deleting
-`plugins/mod` — that restores the backups.
+That is the development stack. In production the same files are copied in at build time
+(`deploy/coolify/Dockerfile`): `public/pics` is an image layer, so anything written there at
+runtime disappears on the next redeploy.
+
+To remove the branding, `git-guard.sh off` and then `git checkout -- public/pics`.
 
 ## Which file shows up where
 
@@ -83,8 +81,6 @@ clones the repo does not inherit it. Run `git-guard.sh on` once per clone.
 
 ## Known effects
 
-- The plugin changes the browser-tab title only. The string "GLPI" still appears in the
-  footer and in the About dialog.
-- The plugin ships no `pt_BR` locale (de, en, es, fr, it only), so its configuration screen
-  stays in English.
-- The login page background is left untouched (`login="0"` in `modifiers.ini`).
+- The string "GLPI" still appears in the page footer and in the About dialog; those are
+  translated literals, not `app_name`.
+- The login page background is GLPI's own — nothing here replaces it.

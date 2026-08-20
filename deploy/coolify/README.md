@@ -1,8 +1,8 @@
 # Deploying to Coolify
 
 `Dockerfile` here is the whole build: the official `glpi/glpi` image with the SECONV-RR logos
-copied over GLPI's own, the UI Branding plugin, and this repository's `defaultlang` plugin
-bundled in. Nothing is compiled, so the build is a few seconds.
+copied over GLPI's own and this repository's `appname` and `defaultlang` plugins bundled in.
+Nothing is compiled, so the build is a few seconds.
 
 ## Why not build the fork
 
@@ -68,20 +68,17 @@ Default super-admin is `glpi` / `glpi` — **change it before exposing the domai
 Then, once, in the container terminal:
 
 ```bash
-php bin/console plugin:install --username=glpi mod
-php bin/console plugin:activate mod
-printf 'title="SECONV-RR"\nlogin="0"\ntheme_logos="0"\n' > /var/glpi/files/_plugins/mod/modifiers.ini
+php bin/console plugin:install --username=glpi appname
+php bin/console plugin:activate appname
 
 php bin/console plugin:install --username=glpi defaultlang
 php bin/console plugin:activate defaultlang
-
-php bin/console plugin:install --username=glpi splitcategory
-php bin/console plugin:activate splitcategory
 ```
 
-That is all the `mod` plugin is there for: `$CFG_GLPI['app_name']`, which drives the browser tab
-title, the footer of notification e-mails, and the issuer label shown by MFA apps. The logos do
-not go through it — they are already in the image.
+`appname` sets `$CFG_GLPI['app_name']` to `SECONV-RR`, which drives the browser tab title, the
+footer of notification e-mails, and the issuer label shown by MFA apps — the one "GLPI" string the
+logos cannot cover. The logos themselves do not go through any plugin; they are already in the
+image. See `plugins/appname/README.md`.
 
 `defaultlang` lives in this repository (`plugins/defaultlang`) and locks the instance to pt_BR: it
 removes every other locale from `$CFG_GLPI['languages']`, so the browser's `Accept-Language` has
@@ -89,15 +86,23 @@ nothing else to negotiate, the language selector in user preferences offers a si
 the `en_GB` the installer wrote into the `glpi` account is discarded. Nobody gets logged out; the
 language changes on the next page load. See `plugins/defaultlang/README.md` for the two caveats.
 
-`splitcategory` also lives in this repository (`plugins/splitcategory`) and splits the ITIL category
-question of every form into two chained dropdowns — category, then the subcategories of that
-category — instead of the single tree dropdown listing every level at once. The question itself is
-untouched, so the ticket destination keeps reading the same answer. No configuration, and
-deactivating it restores the native dropdown. See `plugins/splitcategory/README.md`.
+> **Do not install i-Vertix's `mod` (UI Branding) plugin here.** Its `plugin_mod_activate()`
+> copies the plugin's own sample images over `public/pics` — which is exactly the i-Vertix logo
+> that showed up on the login page before — sets `login="1"` so the login page takes the i-Vertix
+> photo background, and renames the instance to "i-Vertix". `appname` replaces it.
 
-> **Do not press "Apply" on any logo in the plugin's UI Branding screen.** It would overwrite the
-> baked-in SECONV-RR files with the plugin's own sample images. `theme_logos="0"` keeps that
-> screen from touching the themed variants.
+### Removing `mod` from an instance that already has it
+
+Uninstalling from the GLPI plugins page restores the logos it backed up, but its image directory
+lives in the `/var/glpi` volume and a redeploy does not clear it. In the container terminal:
+
+```bash
+php bin/console plugin:deactivate mod
+php bin/console plugin:uninstall mod
+rm -rf /var/glpi/files/_plugins/mod
+```
+
+The redeploy then puts the SECONV-RR logos back, since `public/pics` is an image layer.
 
 After the first successful deploy, set `GLPI_SKIP_AUTOUPDATE=true` so schema migrations happen
 when you decide, not when a redeploy happens to pull a newer image.
@@ -125,5 +130,6 @@ yourself afterwards:
 php bin/console database:update
 ```
 
-Check that the `mod` plugin has a release for the new GLPI patch level first — it declares
-`glpi min 11.0 / max 12.0`, so patch bumps inside 11.x are fine.
+Both bundled plugins declare `glpi min 11.0 / max 12.0`, so patch bumps inside 11.x need nothing.
+A move to 12.0 does: `appname` and `defaultlang` both read internals (`$CFG_GLPI['app_name']`,
+`$CFG_GLPI['languages']`) that a major release is free to change.
