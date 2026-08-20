@@ -5,6 +5,7 @@
 /plugins/*
 !/plugins/.gitkeep
 # Written and maintained here, not downloaded from the marketplace.
+!/plugins/appname
 !/plugins/defaultlang
 /files/*/*
 !/files/*/.gitkeep

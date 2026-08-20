@@ -23,11 +23,12 @@ COPY --chown=www-data:www-data branding/seconv-rr/dist/favicon.ico /var/www/glpi
 # The logos cover everything visual, but the "GLPI" in the browser tab comes from
 # $CFG_GLPI['app_name'] (src/autoload/CFG_GLPI.php:47), which only a plugin can override.
 # The same value is used in notification e-mail footers and as the MFA/TOTP issuer label.
-ADD --chown=www-data:www-data \
-    https://github.com/i-Vertix/glpi-modifications/releases/download/11.0.5/glpi-mod-11.0.5.tar.gz \
-    /tmp/glpi-mod.tar.gz
-RUN tar --extract --gzip --file=/tmp/glpi-mod.tar.gz --directory=/var/www/glpi/plugins \
-    && rm /tmp/glpi-mod.tar.gz
+#
+# This used to be i-Vertix's `mod` plugin. Its activation hook copies its own sample logos
+# over public/pics, sets login="1" so the login page gets the i-Vertix photo background, and
+# renames the instance to "i-Vertix" — undoing the logos above on every activation. See
+# plugins/appname/README.md.
+COPY --chown=www-data:www-data plugins/appname /var/www/glpi/plugins/appname
 
 # Portuguese, always and only. The "Default language" setting alone loses to the browser's
 # Accept-Language header on every anonymous page (Session::getPreferredLanguage(),
