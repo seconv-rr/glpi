@@ -13,6 +13,14 @@
 # receiving those while never moving to 11.0.9 on its own.
 FROM glpi/glpi:11.0.8
 
+# Neither mod_headers nor mod_expires is enabled in the base image, so nothing it serves
+# carries a Cache-Control. Enabling the module and dropping the config in needs root; the
+# image goes back to www-data right after. See zzz-seconv-cache.conf for why it matters.
+USER root
+COPY deploy/coolify/zzz-seconv-cache.conf /etc/apache2/conf-available/zzz-seconv-cache.conf
+RUN a2enmod headers \
+    && a2enconf zzz-seconv-cache
+
 # Inherited from the base image, repeated so scanners can see it without resolving the base.
 USER www-data
 
