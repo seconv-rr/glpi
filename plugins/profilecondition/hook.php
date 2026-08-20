@@ -2,7 +2,7 @@
 
 /**
  * -------------------------------------------------------------------------
- * Urgency by Profile plugin for GLPI
+ * Conditions by profile plugin for GLPI
  * -------------------------------------------------------------------------
  *
  * LICENSE
@@ -18,12 +18,12 @@
  * Plugin install process.
  *
  * The plugin owns no table and no configuration row: the question type is
- * registered in memory on every request and the profiles allowed to see it are
- * read from the PLUGIN_URGENCYPROFILE_ALLOWED_PROFILES constant in setup.php.
+ * registered in memory on every request, and which profiles show or hide what
+ * is configured per form, in the native conditions editor.
  *
  * @param array<string, mixed> $params
  */
-function plugin_urgencyprofile_install(array $params = []): bool
+function plugin_profilecondition_install(array $params = []): bool
 {
     return true;
 }
@@ -36,10 +36,13 @@ function plugin_urgencyprofile_install(array $params = []): bool
  * no longer registered, Question::getQuestionType() returns null
  * (src/Glpi/Form/Question.php:225) and Section::getQuestions() drops the
  * question from the form (src/Glpi/Form/Section.php:312). Reinstalling the
- * plugin brings those questions back untouched, which is why nothing is deleted
- * here.
+ * plugin brings those questions back untouched, which is why nothing is
+ * deleted here.
+ *
+ * Conditions that reference the question are the exception — remove them
+ * before uninstalling. See the README's Uninstall section.
  */
-function plugin_urgencyprofile_uninstall(): bool
+function plugin_profilecondition_uninstall(): bool
 {
     return true;
 }
