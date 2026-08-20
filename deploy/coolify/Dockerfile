@@ -34,9 +34,3 @@ RUN tar --extract --gzip --file=/tmp/glpi-mod.tar.gz --directory=/var/www/glpi/p
 # src/Session.php:971) and to each user's own preference; this plugin removes every other
 # locale from $CFG_GLPI['languages'], which is what all of those read. See its README.
 COPY --chown=www-data:www-data plugins/defaultlang /var/www/glpi/plugins/defaultlang
-
-# A form's category question lists the whole tree in a single dropdown, subcategories included
-# and prefixed with their entity. This plugin renders it as two chained dropdowns — category,
-# then the subcategories of that category — without changing the question or its answer, so the
-# ticket destination still reads the category it always did. See its README.
-COPY --chown=www-data:www-data plugins/splitcategory /var/www/glpi/plugins/splitcategory
