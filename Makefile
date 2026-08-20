@@ -138,6 +138,15 @@ db-update: ## Update local development's database
 		--skip-db-checks
 .PHONY: db-update
 
+seed: ## Fill the local database with demo data, example: make seed c='--scale=5 --only=assets'
+	@$(eval c ?=)
+	$(CONSOLE) tools:seed $(c)
+.PHONY: seed
+
+seed-list: c=--list ## List the seed groups and their dependencies
+seed-list: seed
+.PHONY: seed-list
+
 db-dump: ## Dump the database
 	mkdir -p ./.dump; \
 	DUMP_FILE="./.dump/dump_`date +%Y-%m-%d"_"%H_%M_%S`.sql.gz"; \
