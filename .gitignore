@@ -6,6 +6,8 @@
 !/plugins/.gitkeep
 # Written and maintained here, not downloaded from the marketplace.
 !/plugins/defaultlang
+!/plugins/flatdropdown
+!/plugins/splitcategory
 /files/*/*
 !/files/*/.gitkeep
 /.buildpath

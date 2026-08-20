@@ -66,6 +66,10 @@ up: ## Start all containers
 	$(COMPOSE) up -d
 .PHONY: start
 
+up-lite: ## Start only app, db and mailpit (skips openldap/dbgate — lighter on the machine)
+	$(COMPOSE) up -d app db mailpit
+.PHONY: up-lite
+
 down: ## Stop the containers
 	$(COMPOSE) down --remove-orphans
 .PHONY: stop
@@ -133,6 +137,15 @@ db-update: ## Update local development's database
 		--force \
 		--skip-db-checks
 .PHONY: db-update
+
+seed: ## Fill the local database with demo data, example: make seed c='--scale=5 --only=assets'
+	@$(eval c ?=)
+	$(CONSOLE) tools:seed $(c)
+.PHONY: seed
+
+seed-list: c=--list ## List the seed groups and their dependencies
+seed-list: seed
+.PHONY: seed-list
 
 db-dump: ## Dump the database
 	mkdir -p ./.dump; \
