@@ -34,3 +34,9 @@ RUN tar --extract --gzip --file=/tmp/glpi-mod.tar.gz --directory=/var/www/glpi/p
 # src/Session.php:971) and to each user's own preference; this plugin removes every other
 # locale from $CFG_GLPI['languages'], which is what all of those read. See its README.
 COPY --chown=www-data:www-data plugins/defaultlang /var/www/glpi/plugins/defaultlang
+
+# Category dropdowns in the form editor are always grouped under their entity's complete name
+# ("Raiz > TI"), because Dropdown::getDropdownValue() forces the grouping on for every recursive
+# itemtype (src/Dropdown.php:3103) with no setting to turn it off. This plugin adds a second
+# question type that renders the same dropdown without that header. See its README.
+COPY --chown=www-data:www-data plugins/flatdropdown /var/www/glpi/plugins/flatdropdown
