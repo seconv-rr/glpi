@@ -40,3 +40,9 @@ COPY --chown=www-data:www-data plugins/defaultlang /var/www/glpi/plugins/default
 # itemtype (src/Dropdown.php:3103) with no setting to turn it off. This plugin adds a second
 # question type that renders the same dropdown without that header. See its README.
 COPY --chown=www-data:www-data plugins/flatdropdown /var/www/glpi/plugins/flatdropdown
+
+# A form's category question lists the whole tree in a single dropdown, subcategories included
+# and prefixed with their entity. This plugin renders it as two chained dropdowns — category,
+# then the subcategories of that category — without changing the question or its answer, so the
+# ticket destination still reads the category it always did. See its README.
+COPY --chown=www-data:www-data plugins/splitcategory /var/www/glpi/plugins/splitcategory

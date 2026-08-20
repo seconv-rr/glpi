@@ -74,6 +74,9 @@ printf 'title="SECONV-RR"\nlogin="0"\ntheme_logos="0"\n' > /var/glpi/files/_plug
 
 php bin/console plugin:install --username=glpi defaultlang
 php bin/console plugin:activate defaultlang
+
+php bin/console plugin:install --username=glpi splitcategory
+php bin/console plugin:activate splitcategory
 ```
 
 That is all the `mod` plugin is there for: `$CFG_GLPI['app_name']`, which drives the browser tab
@@ -85,6 +88,12 @@ removes every other locale from `$CFG_GLPI['languages']`, so the browser's `Acce
 nothing else to negotiate, the language selector in user preferences offers a single option, and
 the `en_GB` the installer wrote into the `glpi` account is discarded. Nobody gets logged out; the
 language changes on the next page load. See `plugins/defaultlang/README.md` for the two caveats.
+
+`splitcategory` also lives in this repository (`plugins/splitcategory`) and splits the ITIL category
+question of every form into two chained dropdowns — category, then the subcategories of that
+category — instead of the single tree dropdown listing every level at once. The question itself is
+untouched, so the ticket destination keeps reading the same answer. No configuration, and
+deactivating it restores the native dropdown. See `plugins/splitcategory/README.md`.
 
 > **Do not press "Apply" on any logo in the plugin's UI Branding screen.** It would overwrite the
 > baked-in SECONV-RR files with the plugin's own sample images. `theme_logos="0"` keeps that
