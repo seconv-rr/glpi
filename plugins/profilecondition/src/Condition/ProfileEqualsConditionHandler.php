@@ -23,7 +23,10 @@ use GlpiPlugin\Profilecondition\SessionProfile;
 use Override;
 
 /**
- * "Current profile is / is not" condition.
+ * "Current profile is / is not one of" condition.
+ *
+ * The editor offers a multiple dropdown, so a single condition can list every
+ * allowed profile instead of one OR-chained condition per profile.
  *
  * The answer carried by the engine input ($a) is deliberately ignored: on the
  * initial render it is a stored default value (EngineInput::fromForm(),
@@ -46,7 +49,7 @@ final class ProfileEqualsConditionHandler implements ConditionHandlerInterface
     #[Override]
     public function getTemplate(): string
     {
-        return '/pages/admin/form/condition_handler_templates/dropdown.html.twig';
+        return '/pages/admin/form/condition_handler_templates/dropdown_multiple.html.twig';
     }
 
     #[Override]
@@ -61,14 +64,9 @@ final class ProfileEqualsConditionHandler implements ConditionHandlerInterface
         ValueOperator $operator,
         mixed $b,
     ): bool {
-        if (is_array($b)) {
-            $b = array_pop($b);
-        }
-
         $profile_id = SessionProfile::getActiveProfileId();
         $matches = $profile_id !== null
-            && is_numeric($b)
-            && $profile_id === (int) $b;
+            && in_array($profile_id, self::getSelectedProfileIds($b), true);
 
         return match ($operator) {
             ValueOperator::EQUALS     => $matches,
@@ -77,5 +75,29 @@ final class ProfileEqualsConditionHandler implements ConditionHandlerInterface
             // Unsupported operators
             default => false,
         };
+    }
+
+    /**
+     * Profile ids picked in the editor's dropdown.
+     *
+     * The multiple dropdown stores a list, but two other shapes reach this
+     * point: conditions saved before the dropdown became multiple carry a
+     * single scalar id, and an empty selection posts the empty string of the
+     * fallback hidden input (Dropdown::showFromArray(), src/Dropdown.php:2384).
+     *
+     * @return list<int>
+     */
+    private static function getSelectedProfileIds(mixed $value): array
+    {
+        $values = is_array($value) ? $value : [$value];
+
+        $ids = [];
+        foreach ($values as $selected) {
+            if (is_numeric($selected)) {
+                $ids[] = (int) $selected;
+            }
+        }
+
+        return $ids;
     }
 }
