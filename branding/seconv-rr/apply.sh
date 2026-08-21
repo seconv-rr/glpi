@@ -25,12 +25,18 @@ if [ ! -d "$pics/logos" ]; then
     exit 1
 fi
 
-for variant in black grey white; do
-    for base in logo-G-100 logo-GLPI-100 logo-GLPI-250; do
-        cp "$dist/$base-$variant.png" "$pics/logos/$base-$variant.png"
-    done
+# Whatever generate-assets.py produced, rather than a second hardcoded list of the nine names.
+for source in "$dist"/logo-*.png; do
+    cp "$source" "$pics/logos/$(basename "$source")"
 done
 
 cp "$dist/favicon.ico" "$pics/favicon.ico"
 
 echo "SECONV-RR branding applied. Hard-reload the browser (Ctrl+Shift+R) to drop the cached logos."
+echo
+
+# The copy above only replaces names dist/ already knows. A GLPI release is free to add or
+# rename a logo, and then the new one keeps GLPI's artwork with nothing to show for it — this
+# is the moment that gets noticed, right after a pull. Same for the pieces plugins/appname
+# stands on. set -e makes a failure here fail the whole apply.
+"$glpi_root/deploy/coolify/verify-branding.sh" --glpi-root "$glpi_root" --dist "$dist"

@@ -49,3 +49,16 @@ php bin/console plugin:activate appname
 ## Changing the name
 
 Edit `PLUGIN_APPNAME_APP_NAME` in `setup.php`. Any string works; it is never parsed.
+`deploy/coolify/smoke.sh` reads the constant from here, so nothing else has to be updated.
+
+## When this stops working
+
+Silently, in two ways. GLPI moves one of the three things the plugin stands on — the
+`$CFG_GLPI['app_name']` default, the `plugin_<key>_boot()` call in `src/Plugin.php`, or the
+`config('app_name')` in `templates/layout/parts/head.html.twig` — and the plugin keeps loading
+while the tab title goes back to "GLPI". Or GLPI moves past the `max` this plugin declares,
+refuses to activate it, and the same thing happens on the next redeploy.
+
+`deploy/coolify/verify-branding.sh` checks all four and fails the production build. It cannot
+tell whether the plugin is *active* in a given instance, which is database state — for that,
+`deploy/coolify/smoke.sh <url>` reads the login page's title.
