@@ -43,3 +43,10 @@ COPY --chown=www-data:www-data plugins/appname /var/www/glpi/plugins/appname
 # src/Session.php:971) and to each user's own preference; this plugin removes every other
 # locale from $CFG_GLPI['languages'], which is what all of those read. See its README.
 COPY --chown=www-data:www-data plugins/defaultlang /var/www/glpi/plugins/defaultlang
+
+# GLPI 11 has no per-profile behaviour inside a form: the condition engine only reads answers
+# (Glpi\Form\Condition\EngineInput carries nothing else), and access control filters whole forms,
+# not questions. This plugin turns the session profile into an answer, so visibility, validation
+# and conditional destination creation can all depend on it. Unlike the two above it configures
+# nothing by itself — it only adds a question type the form builder can then use. See its README.
+COPY --chown=www-data:www-data plugins/profilecondition /var/www/glpi/plugins/profilecondition
