@@ -25,10 +25,9 @@ if [ ! -d "$pics/logos" ]; then
     exit 1
 fi
 
-for variant in black grey white; do
-    for base in logo-G-100 logo-GLPI-100 logo-GLPI-250; do
-        cp "$dist/$base-$variant.png" "$pics/logos/$base-$variant.png"
-    done
+# Whatever generate-assets.py produced, rather than a second hardcoded list of the nine names.
+for source in "$dist"/logo-*.png; do
+    cp "$source" "$pics/logos/$(basename "$source")"
 done
 
 cp "$dist/favicon.ico" "$pics/favicon.ico"
