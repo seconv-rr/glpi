@@ -7,7 +7,7 @@
 # Written and maintained here, not downloaded from the marketplace.
 !/plugins/appname
 !/plugins/defaultlang
-!/plugins/urgencyprofile
+!/plugins/profilecondition
 /files/*/*
 !/files/*/.gitkeep
 /.buildpath

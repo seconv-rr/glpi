@@ -1,7 +1,8 @@
 # Deploying to Coolify
 
 `Dockerfile` here is the whole build: the official `glpi/glpi` image with the SECONV-RR logos
-copied over GLPI's own and this repository's `appname` and `defaultlang` plugins bundled in.
+copied over GLPI's own and this repository's `appname`, `defaultlang` and `profilecondition`
+plugins bundled in.
 Nothing is compiled, so the build is a few seconds.
 
 ## Why not build the fork
@@ -73,6 +74,9 @@ php bin/console plugin:activate appname
 
 php bin/console plugin:install --username=glpi defaultlang
 php bin/console plugin:activate defaultlang
+
+php bin/console plugin:install --username=glpi profilecondition
+php bin/console plugin:activate profilecondition
 ```
 
 `appname` sets `$CFG_GLPI['app_name']` to `SECONV-RR`, which drives the browser tab title, the
@@ -85,6 +89,15 @@ removes every other locale from `$CFG_GLPI['languages']`, so the browser's `Acce
 nothing else to negotiate, the language selector in user preferences offers a single option, and
 the `en_GB` the installer wrote into the `glpi` account is discarded. Nobody gets logged out; the
 language changes on the next page load. See `plugins/defaultlang/README.md` for the two caveats.
+
+`profilecondition` (`plugins/profilecondition`) adds a **Current user profile** question type to
+the native form builder. The question is hidden from whoever fills the form and answers itself
+with the profile active in the session, which makes the current profile usable as a criterion in
+the native conditions editor: visibility of any question, comment or section, validation rules,
+and conditional creation of destinations. Activating it changes nothing on its own — everything is
+configured per form in the UI. See `plugins/profilecondition/README.md` for the two recipes
+(urgency restricted by profile, forced default per profile) and for the caveat that conditions
+store profile **ids**, so a form exported to another instance needs its conditions re-checked.
 
 > **Do not install i-Vertix's `mod` (UI Branding) plugin here.** Its `plugin_mod_activate()`
 > copies the plugin's own sample images over `public/pics` — which is exactly the i-Vertix logo

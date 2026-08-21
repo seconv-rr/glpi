@@ -1,0 +1,44 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: GLPI plugin - Conditions by profile\n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: 2026-08-20 00:00+0000\n"
+"Last-Translator: SECONV-RR\n"
+"Language-Team: SECONV-RR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: pt_BR\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: src/QuestionType/ContextCategory.php
+msgid "Context"
+msgstr "Contexto"
+
+#: src/QuestionType/UserProfile.php
+msgid "Current user profile"
+msgstr "Perfil atual do usuário"
+
+#: src/QuestionType/UserProfile.php
+msgid ""
+"Never shown to whoever fills the form: it answers itself with the profile "
+"active in the session."
+msgstr ""
+"Nunca aparece para quem preenche o formulário: ela se responde sozinha com o "
+"perfil ativo na sessão."
+
+#: src/QuestionType/UserProfile.php
+msgid ""
+"Use it as a criterion in the conditions of other questions, comments, "
+"sections and destinations."
+msgstr ""
+"Use-a como critério nas condições de outras perguntas, comentários, seções e "
+"destinos."
+
+#: src/QuestionType/UserProfile.php
+msgid ""
+"Do not mark it as mandatory: a visitor without a session has no profile, and "
+"the empty answer would block the whole form."
+msgstr ""
+"Não a marque como obrigatória: um visitante sem sessão não tem perfil, e a "
+"resposta vazia bloquearia o formulário inteiro."
