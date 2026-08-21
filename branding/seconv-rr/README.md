@@ -10,8 +10,11 @@ arms and the name SECONV-RR.
 | `src/brasao-roraima.png` | Source coat of arms, 924x1024 RGBA, transparent background |
 | `generate-assets.py` | Renders `dist/` from the source. Needs Pillow and Liberation Sans Bold |
 | `dist/` | The nine logo variants plus `favicon.ico`, named exactly as GLPI serves them |
-| `apply.sh` | Copies `dist/` over `public/pics` |
+| `apply.sh` | Copies `dist/` over `public/pics`, then verifies the result |
 | `git-guard.sh` | Keeps the overwritten GLPI files from showing up as modified, and from blocking pulls |
+
+The check `apply.sh` ends with lives in `deploy/coolify/verify-branding.sh`, because the
+production build runs the same one — see [Catching it when it breaks](#catching-it-when-it-breaks).
 
 The logos are laid out as coat of arms on the left, `SECONV-RR` to the right of it.
 
@@ -41,18 +44,20 @@ To remove the branding, `git-guard.sh off` and then `git checkout -- public/pics
 
 ## Which file shows up where
 
-GLPI 11.0 wires the logos in `css/includes/_base.scss:65-72`. Only four of the ten files are
-actually read:
+GLPI 11.0 wires the logos in `css/includes/_base.scss:65-70`. Six of the ten files are read:
 
 | File | Where |
 | --- | --- |
 | `logo-GLPI-100-white.png` | header / expanded side menu, on the navy `#2f3f64` background |
 | `logo-G-100-white.png` | collapsed side menu |
+| `logo-GLPI-100-black.png` | the same header, when the palette puts it on a light background |
+| `logo-G-100-black.png` | the same collapsed menu, on a light background |
 | `logo-GLPI-250-black.png` | login card, light palette |
 | `logo-GLPI-250-white.png` | login card, dark palette |
 
-The `-black` and `-grey` variants of the two smaller sizes are generated anyway so a palette
-change cannot fall back to a GLPI-branded image.
+The three `-grey` variants are generated anyway so a palette change cannot fall back to a
+GLPI-branded image. `verify-branding.sh` reads the same stylesheet, so this list stops being a
+thing to remember: if GLPI points a variable somewhere else, the check fails.
 
 ## Living with git
 
@@ -78,6 +83,30 @@ back and re-hides it, including when the command fails:
 
 The flag lives in `.git/index`, so it is local to one clone — it is not pushed and whoever
 clones the repo does not inherit it. Run `git-guard.sh on` once per clone.
+
+## Catching it when it breaks
+
+Both halves of the branding break without a word. GLPI can add or rename a logo, and then
+`apply.sh` — which only writes names `dist/` already has — leaves the new one GLPI-branded. Or
+upstream moves what `plugins/appname` stands on, and the tab title goes back to "GLPI" with the
+plugin still loading fine. Neither shows up as an error anywhere.
+
+`deploy/coolify/verify-branding.sh` turns both into a failure. It runs on its own at the end of
+`apply.sh`, so a pull that changed something is caught the next time the branding is applied,
+and again as the last step of the production `Dockerfile`, where it fails the build:
+
+```bash
+./deploy/coolify/verify-branding.sh                    # the checkout
+./deploy/coolify/verify-branding.sh --glpi-root /var/www/glpi --dist /tmp/dist
+```
+
+It checks that every logo in `public/pics/logos` and every logo `_base.scss` asks for exists in
+`dist/`, that what is served matches `dist/` byte for byte, that `$CFG_GLPI['app_name']`, the
+`plugin_<key>_boot()` hook and `config('app_name')` in the layout are all still where `appname`
+expects them, and that GLPI's version is inside the range the plugin declares.
+
+What it cannot check is whether the plugin is installed and active — that is instance state, in
+the database. `deploy/coolify/smoke.sh <url>` reads a running site's login page for that.
 
 ## Known effects
 

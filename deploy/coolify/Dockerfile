@@ -50,3 +50,14 @@ COPY --chown=www-data:www-data plugins/defaultlang /var/www/glpi/plugins/default
 # and conditional destination creation can all depend on it. Unlike the two above it configures
 # nothing by itself — it only adds a question type the form builder can then use. See its README.
 COPY --chown=www-data:www-data plugins/profilecondition /var/www/glpi/plugins/profilecondition
+
+# Both ways the branding above can stop working are silent: a GLPI release that adds or renames
+# a logo leaves a file the COPY never touched, and one that moves $CFG_GLPI['app_name'] leaves
+# plugins/appname a no-op with the tab title back to "GLPI". Nothing errors at runtime, so a
+# bad tag would deploy green. This turns both into a failed build. See verify-branding.sh.
+#
+# The mounts are read-only and leave nothing behind — they need BuildKit, which is the default
+# builder in Docker 23+ and what Coolify uses.
+RUN --mount=type=bind,source=deploy/coolify/verify-branding.sh,target=/tmp/verify-branding.sh \
+    --mount=type=bind,source=branding/seconv-rr/dist,target=/tmp/branding-dist \
+    bash /tmp/verify-branding.sh --glpi-root /var/www/glpi --dist /tmp/branding-dist

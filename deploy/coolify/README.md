@@ -5,6 +5,10 @@ copied over GLPI's own and this repository's `appname`, `defaultlang` and `profi
 plugins bundled in.
 Nothing is compiled, so the build is a few seconds.
 
+`verify-branding.sh` runs as the last build step and fails the build when the branding has
+stopped holding; `smoke.sh` checks the same thing against a deployed instance. See
+[Checking the branding still works](#checking-the-branding-still-works).
+
 ## Why not build the fork
 
 The official image accepts `GLPI_REPO` and `GLPI_VERSION` build args, so building
@@ -120,6 +124,37 @@ The redeploy then puts the SECONV-RR logos back, since `public/pics` is an image
 After the first successful deploy, set `GLPI_SKIP_AUTOUPDATE=true` so schema migrations happen
 when you decide, not when a redeploy happens to pull a newer image.
 
+## Checking the branding still works
+
+Both halves of the branding fail without saying anything. A GLPI release that adds or renames a
+logo leaves a file the `COPY` never touched, so a GLPI-branded image comes back on one screen.
+A release that moves `$CFG_GLPI['app_name']`, the `plugin_<key>_boot()` hook or the twig that
+prints it turns `appname` into a no-op, and the tab title quietly says "GLPI" again. Nothing
+errors, nothing is logged, and the deploy goes green.
+
+**At build time** — `verify-branding.sh` is the last step of the `Dockerfile`, so a tag bump
+that breaks any of it fails the build instead of shipping. It checks that every logo GLPI ships
+and every logo the stylesheet asks for has a counterpart in `branding/seconv-rr/dist`, that the
+served files match it byte for byte, that the three things `appname` stands on are still there,
+and that the image's GLPI version is inside the range the plugin declares. It reads BuildKit
+bind mounts, so nothing it needs ends up in the image. Run it by hand against the checkout too:
+
+```bash
+./deploy/coolify/verify-branding.sh
+```
+
+**After a deploy** — the one thing an image cannot prove is that the plugin is *active*: that
+lives in the database, in the `/var/glpi` volume. An instance where nobody ran
+`plugin:activate appname`, or where someone deactivated it, serves a perfectly working site
+called "GLPI". `smoke.sh` reads the login page anonymously and compares what it gets with
+`dist/`:
+
+```bash
+./deploy/coolify/smoke.sh https://helpdesk.example
+```
+
+Worth running after the first deploy, after every GLPI bump, and after touching plugins.
+
 ## Timezones
 
 GLPI wants the MySQL timezone tables. On the database, once:
@@ -146,3 +181,8 @@ php bin/console database:update
 Both bundled plugins declare `glpi min 11.0 / max 12.0`, so patch bumps inside 11.x need nothing.
 A move to 12.0 does: `appname` and `defaultlang` both read internals (`$CFG_GLPI['app_name']`,
 `$CFG_GLPI['languages']`) that a major release is free to change.
+
+The build refuses either case rather than shipping it: `verify-branding.sh` fails when the new
+tag is outside that range, when it ships a logo `dist/` does not replace, or when it moved
+anything `appname` reads. Run `smoke.sh` against the deployed URL afterwards, since the plugin
+being *active* is instance state the build cannot see.
