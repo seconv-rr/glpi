@@ -32,7 +32,7 @@ and provides two condition handlers instead of the default ones:
 
 | Handler | Operators | Meaning |
 | --- | --- | --- |
-| `ProfileEqualsConditionHandler` | *Is equal to*, *Is not equal to* | Compare the current profile against one picked from a dropdown of all profiles. |
+| `ProfileEqualsConditionHandler` | *Is equal to*, *Is not equal to* | Compare the current profile against the profiles picked in a multiple dropdown of all profiles: *Is equal to* matches when it is one of them, *Is not equal to* when it is none of them. |
 | `ProfileEmptyConditionHandler` | *Is empty*, *Is not empty* | Whether there is a session profile at all — an "is the visitor logged in" check for public forms. |
 
 The one design decision everything rests on: **the handlers ignore the answer the engine hands
@@ -76,8 +76,8 @@ What the question itself does:
    mandatory: a visitor without a session has no profile, and the empty answer would block the
    whole form.
 3. On any other question, comment or section, set *Visibility* to *Visible if...* (or *Hidden
-   if...*) and pick the profile question as the criterion, **Is equal to**, and a profile.
-   Several profiles = several conditions chained with **OR**.
+   if...*) and pick the profile question as the criterion, **Is equal to**, and every profile that
+   may see it — the value dropdown is a multiple one, so one condition covers them all.
 4. The same criterion works in a question's validation conditions and in a destination's creation
    conditions.
 
@@ -86,8 +86,8 @@ What the question itself does:
 To let only some profiles choose the urgency (what the former `urgencyprofile` plugin hard-coded):
 
 1. Add a **Current user profile** question.
-2. Add a core **Urgency** question, *Visible if* profile *Is equal to* Technician (OR-chain the
-   other allowed profiles).
+2. Add a core **Urgency** question, *Visible if* profile *Is equal to* Technician (pick the other
+   allowed profiles in the same dropdown).
 3. Leave the destination's **Urgency** field on *Answer to last "Urgency" question* (the default).
 
 Allowed profiles answer and their choice reaches the ticket. Everyone else never sees the
@@ -103,8 +103,10 @@ use two destinations with opposite creation conditions:
 - Destination B — *Created if* profile *Is not equal to* Technician — urgency = the specific
   value.
 
-Exactly one of the two is created per submission. The same pattern gives any per-profile
-destination difference (category, assignee, template...), which no hard-coded plugin could.
+Exactly one of the two is created per submission, as long as both conditions list the same set of
+profiles: *Is not equal to* matches when the current profile is none of the picked ones. The same
+pattern gives any per-profile destination difference (category, assignee, template...), which no
+hard-coded plugin could.
 
 ## Caveats
 
