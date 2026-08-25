@@ -8,6 +8,7 @@
 !/plugins/appname
 !/plugins/defaultlang
 !/plugins/profilecondition
+!/plugins/entitycatalog
 /files/*/*
 !/files/*/.gitkeep
 /.buildpath
