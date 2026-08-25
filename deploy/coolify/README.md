@@ -81,6 +81,9 @@ php bin/console plugin:activate defaultlang
 
 php bin/console plugin:install --username=glpi profilecondition
 php bin/console plugin:activate profilecondition
+
+php bin/console plugin:install --username=glpi entitycatalog
+php bin/console plugin:activate entitycatalog
 ```
 
 `appname` sets `$CFG_GLPI['app_name']` to `SECONV-RR`, which drives the browser tab title, the
@@ -102,6 +105,15 @@ and conditional creation of destinations. Activating it changes nothing on its o
 configured per form in the UI. See `plugins/profilecondition/README.md` for the two recipes
 (urgency restricted by profile, forced default per profile) and for the caveat that conditions
 store profile **ids**, so a form exported to another instance needs its conditions re-checked.
+
+`entitycatalog` (`plugins/entitycatalog`) adds a helpdesk tile that opens the service catalog of a
+**chosen** entity. The catalog reads the entity from the session and has no parameter for it, so
+the native "GLPI page" tile can only open the one the visitor is already in; this tile switches the
+session to the target entity first, then hands over to the catalog untouched. It is the only way to
+put "Abrir chamado na TI" on the home page of another entity. Activating it changes nothing on its
+own — add the tile in **Administração > Entidades > (entidade) > Página inicial do Helpdesk**. Note
+the switch is not scoped to the click: the visitor stays in the target entity afterwards, exactly
+as if they had used the entity selector. See `plugins/entitycatalog/README.md`.
 
 > **Do not install i-Vertix's `mod` (UI Branding) plugin here.** Its `plugin_mod_activate()`
 > copies the plugin's own sample images over `public/pics` — which is exactly the i-Vertix logo

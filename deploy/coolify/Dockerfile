@@ -51,6 +51,13 @@ COPY --chown=www-data:www-data plugins/defaultlang /var/www/glpi/plugins/default
 # nothing by itself — it only adds a question type the form builder can then use. See its README.
 COPY --chown=www-data:www-data plugins/profilecondition /var/www/glpi/plugins/profilecondition
 
+# The service catalog has no entity parameter: its controller reads the session's current entity
+# (src/Glpi/Controller/ServiceCatalog/IndexController.php:80) and the form provider filters on the
+# session's active entities, so the native "GLPI page" tile can only ever open the catalog of the
+# entity the visitor is already in. This plugin adds a tile that switches the session first, which
+# is how a helpdesk home in one entity can offer the catalog of another. See its README.
+COPY --chown=www-data:www-data plugins/entitycatalog /var/www/glpi/plugins/entitycatalog
+
 # Both ways the branding above can stop working are silent: a GLPI release that adds or renames
 # a logo leaves a file the COPY never touched, and one that moves $CFG_GLPI['app_name'] leaves
 # plugins/appname a no-op with the tab title back to "GLPI". Nothing errors at runtime, so a
