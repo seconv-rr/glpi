@@ -1,0 +1,61 @@
+{#
+ # -------------------------------------------------------------------------
+ # Entity service catalog plugin for GLPI
+ # -------------------------------------------------------------------------
+ #
+ # Configuration fields of the tile, rendered inside the native "Add tile" and
+ # "Edit tile" forms (templates/pages/admin/helpdesk_home_config_add_tile_form.html.twig).
+ # The first three fields mirror the native tiles so the two look alike; the
+ # last one is what this plugin adds.
+ #
+ # LICENSE
+ #
+ # This program is free software: you can redistribute it and/or modify it under
+ # the terms of the GNU General Public License as published by the Free Software
+ # Foundation, either version 3 of the License, or (at your option) any later
+ # version.
+ # -------------------------------------------------------------------------
+ #}
+
+{% import 'components/form/fields_macros.html.twig' as fields %}
+
+{{ fields.textField('title', tile.fields['title']|default(''), __('Title'), {
+    full_width: true,
+    is_horizontal: false,
+    maxlength: 255,
+}) }}
+
+{{ fields.textareaField(
+    'description',
+    tile.fields['description']|default(''),
+    __('Description'), {
+        full_width: true,
+        is_horizontal: false,
+        enable_richtext: true,
+        plugins_to_remove: ['link', 'autolink'],
+    }
+) }}
+
+{{ fields.illustrationField(
+    'illustration',
+    tile.getIllustration(),
+    __('Illustration'),
+    {
+        is_horizontal: false,
+        full_width : true,
+        backdrop: false,
+        extra_css_classes: 'illustration-selector-extra-margin',
+    }
+) }}
+
+{{ fields.dropdownField(
+    'Entity',
+    'target_entities_id',
+    tile.getTargetEntityId(),
+    __('Catalog of the entity', 'entitycatalog'),
+    {
+        full_width: true,
+        is_horizontal: false,
+        display_emptychoice: false,
+    }
+) }}
