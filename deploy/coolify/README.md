@@ -167,6 +167,91 @@ called "GLPI". `smoke.sh` reads the login page anonymously and compares what it 
 
 Worth running after the first deploy, after every GLPI bump, and after touching plugins.
 
+## Single sign-on with Zitadel
+
+GLPI 11 has no OpenID Connect client, so Apache does the login. The image ships
+`mod_auth_openidc`, which sends the browser to Zitadel, validates what comes back and puts the
+user's login in `REMOTE_USER`. GLPI reads that variable through its own "other authentication
+sent in the HTTP request" setting. `seconv-oidc/provider.inc` has the details.
+
+The module is installed in every build but does nothing until the container has `SECONV_OIDC`
+set. Without that variable the instance keeps its local login form and never talks to Zitadel.
+
+| `SECONV_OIDC` | Who can log in |
+| --- | --- |
+| unset | Local accounts only. |
+| `optional` | Both. The login form works as before, and `/oidc/login` logs in through Zitadel. |
+| `on` | Zitadel only. |
+
+`optional` is for the transition: log in through Zitadel, check that the account lands with the
+right profile, and keep the local form as the way back while that is being sorted out. Two things
+to know about it. Nothing on the login page links to `/oidc/login`, so people have to be given
+the address. And while the browser holds a Zitadel session, the GLPI login page logs that user in
+without asking; to reach the local form anyway, open `/?noAUTO=1`.
+
+With `on`, nobody reaches GLPI without a Zitadel session, and that includes the local login form,
+anonymous forms and the public FAQ. Five paths stay open because their callers have no browser:
+`/api.php`, `/apirest.php`, `/caldav.php`, `/status.php` and `/front/inventory.php`.
+
+### 1. Zitadel
+
+In the project, create an application of type Web with authentication method Code (PKCE is
+sent as well). Register one pair of URIs for each domain the instance answers on:
+
+| Field | Value |
+| --- | --- |
+| Redirect URI | `https://helpdesk.example/oidc/callback` |
+| Post logout URI | `https://helpdesk.example/` |
+
+Keep the client ID and the client secret.
+
+### 2. GLPI
+
+With `optional` the order does not matter, since the local form stays. Before `on`, make sure at
+least one Zitadel account already logs in as Super-Admin, because afterwards Zitadel is the only
+way in.
+
+GLPI matches accounts by login: the Zitadel login name has to equal the GLPI login. For an
+existing GLPI user, rename it or set the Zitadel login name to match. If the Zitadel login name
+has the form `user@domain`, either use that whole string as the GLPI login or enable the domain
+removal below and use only `user`.
+
+In **Configurar > Autenticação > Outros métodos de autenticação**:
+
+| Field | Value |
+| --- | --- |
+| Field storing the login in the HTTP request | `REMOTE_USER` |
+| Remove the domain of logins like login@domain | as decided above |
+| Surname | `HTTP_OIDC_CLAIM_FAMILY_NAME` |
+| First name | `HTTP_OIDC_CLAIM_GIVEN_NAME` |
+| Email | `HTTP_OIDC_CLAIM_EMAIL` |
+| SSO logout URL | `/oidc/callback?logout=https%3A%2F%2Fhelpdesk.example%2F` |
+
+In **Configurar > Autenticação > Configuração**, leave "Automatically add users from an external
+authentication source" enabled so a first login creates the account. New accounts get the default
+profile unless a rule in **Administração > Regras > Regras para atribuir autorizações a um
+usuário** says otherwise.
+
+### 3. Coolify
+
+Add the environment variables and redeploy:
+
+```
+SECONV_OIDC=optional
+OIDC_ISSUER=https://<zitadel domain>
+OIDC_CLIENT_ID=<from Zitadel>
+OIDC_CLIENT_SECRET=<from Zitadel>
+OIDC_CRYPTO_PASSPHRASE=<openssl rand -hex 32>
+```
+
+`OIDC_ISSUER` has no trailing slash. `OIDC_CRYPTO_PASSPHRASE` encrypts the module's session
+cookie; changing it logs everyone out.
+
+### Switching it off
+
+Remove `SECONV_OIDC` and restart the container. The local login form is back and no rebuild is
+needed. This is also the way back in if the Zitadel side breaks while the instance runs with `on`.
+
 ## Timezones
 
 GLPI wants the MySQL timezone tables. On the database, once:
