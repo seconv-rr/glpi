@@ -167,6 +167,77 @@ called "GLPI". `smoke.sh` reads the login page anonymously and compares what it 
 
 Worth running after the first deploy, after every GLPI bump, and after touching plugins.
 
+## Single sign-on with Zitadel
+
+GLPI 11 has no OpenID Connect client, so Apache does the login. The image ships
+`mod_auth_openidc`, which sends the browser to Zitadel, validates what comes back and puts the
+user's login in `REMOTE_USER`. GLPI reads that variable through its own "other authentication
+sent in the HTTP request" setting. `seconv-oidc.conf` has the details.
+
+The module is installed in every build but protects nothing until the container runs with
+`SECONV_OIDC=on`. Without that variable the instance keeps its local login form.
+
+Once it is on, nobody reaches GLPI without a Zitadel session, and that includes the local login
+form, anonymous forms and the public FAQ. Five paths stay open because their callers have no
+browser: `/api.php`, `/apirest.php`, `/caldav.php`, `/status.php` and `/front/inventory.php`.
+
+### 1. Zitadel
+
+In the project, create an application of type Web with authentication method Code (PKCE is
+sent as well). Register one pair of URIs for each domain the instance answers on:
+
+| Field | Value |
+| --- | --- |
+| Redirect URI | `https://helpdesk.example/oidc/callback` |
+| Post logout URI | `https://helpdesk.example/` |
+
+Keep the client ID and the client secret.
+
+### 2. GLPI, before switching on
+
+Do this while the local login still works, because afterwards it is the only way in.
+
+Create or rename a GLPI user so its login equals your own Zitadel login name, and give it the
+Super-Admin profile. If the Zitadel login name has the form `user@domain`, either use that whole
+string as the GLPI login or enable the domain removal below and use only `user`.
+
+In **Configurar > Autenticação > Outros métodos de autenticação**:
+
+| Field | Value |
+| --- | --- |
+| Field storing the login in the HTTP request | `REMOTE_USER` |
+| Remove the domain of logins like login@domain | as decided above |
+| Surname | `HTTP_OIDC_CLAIM_FAMILY_NAME` |
+| First name | `HTTP_OIDC_CLAIM_GIVEN_NAME` |
+| Email | `HTTP_OIDC_CLAIM_EMAIL` |
+| SSO logout URL | `/oidc/callback?logout=https%3A%2F%2Fhelpdesk.example%2F` |
+
+In **Configurar > Autenticação > Configuração**, leave "Automatically add users from an external
+authentication source" enabled so a first login creates the account. New accounts get the default
+profile unless a rule in **Administração > Regras > Regras para atribuir autorizações a um
+usuário** says otherwise.
+
+### 3. Coolify
+
+Add the environment variables and redeploy:
+
+```
+SECONV_OIDC=on
+OIDC_ISSUER=https://<zitadel domain>
+OIDC_CLIENT_ID=<from Zitadel>
+OIDC_CLIENT_SECRET=<from Zitadel>
+OIDC_CRYPTO_PASSPHRASE=<openssl rand -hex 32>
+```
+
+`OIDC_ISSUER` has no trailing slash. `OIDC_CRYPTO_PASSPHRASE` encrypts the module's session
+cookie; changing it logs everyone out.
+
+### Switching it off
+
+Remove `SECONV_OIDC` (or set it to anything other than `on`) and restart the container. The local
+login form is back and no rebuild is needed. This is also the way back in if the Zitadel side
+breaks.
+
 ## Timezones
 
 GLPI wants the MySQL timezone tables. On the database, once:
