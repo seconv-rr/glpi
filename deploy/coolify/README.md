@@ -172,14 +172,26 @@ Worth running after the first deploy, after every GLPI bump, and after touching 
 GLPI 11 has no OpenID Connect client, so Apache does the login. The image ships
 `mod_auth_openidc`, which sends the browser to Zitadel, validates what comes back and puts the
 user's login in `REMOTE_USER`. GLPI reads that variable through its own "other authentication
-sent in the HTTP request" setting. `seconv-oidc.conf` has the details.
+sent in the HTTP request" setting. `seconv-oidc/provider.inc` has the details.
 
-The module is installed in every build but protects nothing until the container runs with
-`SECONV_OIDC=on`. Without that variable the instance keeps its local login form.
+The module is installed in every build but does nothing until the container has `SECONV_OIDC`
+set. Without that variable the instance keeps its local login form and never talks to Zitadel.
 
-Once it is on, nobody reaches GLPI without a Zitadel session, and that includes the local login
-form, anonymous forms and the public FAQ. Five paths stay open because their callers have no
-browser: `/api.php`, `/apirest.php`, `/caldav.php`, `/status.php` and `/front/inventory.php`.
+| `SECONV_OIDC` | Who can log in |
+| --- | --- |
+| unset | Local accounts only. |
+| `optional` | Both. The login form works as before, and `/oidc/login` logs in through Zitadel. |
+| `on` | Zitadel only. |
+
+`optional` is for the transition: log in through Zitadel, check that the account lands with the
+right profile, and keep the local form as the way back while that is being sorted out. Two things
+to know about it. Nothing on the login page links to `/oidc/login`, so people have to be given
+the address. And while the browser holds a Zitadel session, the GLPI login page logs that user in
+without asking; to reach the local form anyway, open `/?noAUTO=1`.
+
+With `on`, nobody reaches GLPI without a Zitadel session, and that includes the local login form,
+anonymous forms and the public FAQ. Five paths stay open because their callers have no browser:
+`/api.php`, `/apirest.php`, `/caldav.php`, `/status.php` and `/front/inventory.php`.
 
 ### 1. Zitadel
 
@@ -193,13 +205,16 @@ sent as well). Register one pair of URIs for each domain the instance answers on
 
 Keep the client ID and the client secret.
 
-### 2. GLPI, before switching on
+### 2. GLPI
 
-Do this while the local login still works, because afterwards it is the only way in.
+With `optional` the order does not matter, since the local form stays. Before `on`, make sure at
+least one Zitadel account already logs in as Super-Admin, because afterwards Zitadel is the only
+way in.
 
-Create or rename a GLPI user so its login equals your own Zitadel login name, and give it the
-Super-Admin profile. If the Zitadel login name has the form `user@domain`, either use that whole
-string as the GLPI login or enable the domain removal below and use only `user`.
+GLPI matches accounts by login: the Zitadel login name has to equal the GLPI login. For an
+existing GLPI user, rename it or set the Zitadel login name to match. If the Zitadel login name
+has the form `user@domain`, either use that whole string as the GLPI login or enable the domain
+removal below and use only `user`.
 
 In **Configurar > Autenticação > Outros métodos de autenticação**:
 
@@ -222,7 +237,7 @@ usuário** says otherwise.
 Add the environment variables and redeploy:
 
 ```
-SECONV_OIDC=on
+SECONV_OIDC=optional
 OIDC_ISSUER=https://<zitadel domain>
 OIDC_CLIENT_ID=<from Zitadel>
 OIDC_CLIENT_SECRET=<from Zitadel>
@@ -234,9 +249,8 @@ cookie; changing it logs everyone out.
 
 ### Switching it off
 
-Remove `SECONV_OIDC` (or set it to anything other than `on`) and restart the container. The local
-login form is back and no rebuild is needed. This is also the way back in if the Zitadel side
-breaks.
+Remove `SECONV_OIDC` and restart the container. The local login form is back and no rebuild is
+needed. This is also the way back in if the Zitadel side breaks while the instance runs with `on`.
 
 ## Timezones
 

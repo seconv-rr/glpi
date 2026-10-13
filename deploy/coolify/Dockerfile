@@ -21,15 +21,16 @@ COPY deploy/coolify/zzz-seconv-cache.conf /etc/apache2/conf-available/zzz-seconv
 RUN a2enmod headers \
     && a2enconf zzz-seconv-cache
 
-# Single sign-on through Zitadel. The module is always installed and loaded, but it protects
-# nothing until the container runs with SECONV_OIDC=on: zzz-seconv-oidc.conf only includes
-# seconv-oidc/on.conf in that case. See seconv-oidc.conf for how GLPI picks the login up.
+# Single sign-on through Zitadel. The module is always installed and loaded, but it does
+# nothing until the container runs with SECONV_OIDC set: zzz-seconv-oidc.conf includes
+# seconv-oidc/<value>.conf, which exists for "on" (Zitadel only) and "optional" (Zitadel
+# next to the local login form). See seconv-oidc/provider.inc for how GLPI picks the login up.
 #
 # Not pinned: Debian removes superseded package versions from its mirrors, so a pin would
 # break the next rebuild, and for the module that handles authentication the security
 # updates of the stable release are what we want.
 COPY deploy/coolify/zzz-seconv-oidc.conf /etc/apache2/conf-available/zzz-seconv-oidc.conf
-COPY deploy/coolify/seconv-oidc.conf /etc/apache2/seconv-oidc/on.conf
+COPY deploy/coolify/seconv-oidc/ /etc/apache2/seconv-oidc/
 # hadolint ignore=DL3008
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libapache2-mod-auth-openidc \

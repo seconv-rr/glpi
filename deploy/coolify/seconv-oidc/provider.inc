@@ -6,9 +6,9 @@
 # the whole OIDC exchange before PHP starts and leaves the result in REMOTE_USER, so GLPI
 # never sees a password or a token.
 #
-# This file is not in conf-enabled. zzz-seconv-oidc.conf includes it only when the container
-# has SECONV_OIDC=on, which makes that variable the switch: without it the image behaves
-# exactly like one that never had the module, local login form included.
+# This file only says how to talk to Zitadel and protects nothing. on.conf and optional.conf
+# include it and decide who has to log in. It is a .inc so that no value of SECONV_OIDC can
+# make zzz-seconv-oidc.conf load it by itself.
 
 OIDCProviderMetadataURL ${OIDC_ISSUER}/.well-known/openid-configuration
 OIDCClientID ${OIDC_CLIENT_ID}
@@ -28,25 +28,3 @@ OIDCXForwardedHeaders X-Forwarded-Host X-Forwarded-Proto
 # The claim that becomes the GLPI login. Zitadel's preferred_username is the login name,
 # which may carry an @domain suffix; GLPI can strip it ("Remove the domain of logins").
 OIDCRemoteUserClaim preferred_username
-
-# GLPI routes every URL that is not a file to index.php with a RewriteRule, and Apache
-# authorizes that internal redirect a second time, as /index.php. The exemptions below match
-# the URL the client asked for, so on the second pass they would no longer apply and the
-# API would be sent to the login page after all. REDIRECT_STATUS only exists on an internal
-# redirect, whose original URL has already been through this same check, and no request
-# header can set it. Asking for /index.php directly is not a redirect and still needs a user.
-<Location />
-    AuthType openid-connect
-    <RequireAny>
-        Require valid-user
-        Require expr "-n reqenv('REDIRECT_STATUS')"
-    </RequireAny>
-</Location>
-
-# Callers with no browser to follow a redirect to the Zitadel login page. Each of these
-# authenticates by itself (API tokens, the inventory agent's own credentials) or exposes
-# nothing private.
-<LocationMatch "^/(api\.php|apirest\.php|caldav\.php|status\.php|front/inventory\.php)(/|$)">
-    AuthType None
-    Require all granted
-</LocationMatch>
