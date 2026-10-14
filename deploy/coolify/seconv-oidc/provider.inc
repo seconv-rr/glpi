@@ -21,6 +21,13 @@ OIDCScope "openid profile email"
 # sent back to itself. Nothing exists at this path, the module answers it.
 OIDCRedirectURI /oidc/callback
 
+# GLPI keeps a single SSO logout URL and only accepts it absolute, so it names one domain. The
+# module's session cookie belongs to the domain that set it: logging out through another domain
+# would end the Zitadel session and leave the local one alive, still logged in. This points
+# GLPI's redirect to /oidc/callback?logout= back at the domain the browser is on, for both the
+# callback and the address Zitadel returns to.
+Header set Location "expr=https://%{HTTP_HOST}/oidc/callback?logout=https%3A%2F%2F%{HTTP_HOST}%2F" "expr=resp('Location') =~ m#^https://[^/]+/oidc/callback\?logout=#"
+
 # TLS ends at Coolify's Traefik and Apache only ever sees plain HTTP on port 80. Without
 # these the module would build http:// URLs for the redirect and Zitadel would refuse them.
 OIDCXForwardedHeaders X-Forwarded-Host X-Forwarded-Proto

@@ -232,7 +232,13 @@ In **Configurar > Autenticação > Outros métodos de autenticação**:
 | Surname | `HTTP_OIDC_CLAIM_FAMILY_NAME` |
 | First name | `HTTP_OIDC_CLAIM_GIVEN_NAME` |
 | Email | `HTTP_OIDC_CLAIM_EMAIL` |
-| SSO logout URL | `/oidc/callback?logout=https%3A%2F%2Fhelpdesk.example%2F` |
+| SSO logout URL | `https://helpdesk.example/oidc/callback?logout=https%3A%2F%2Fhelpdesk.example%2F` |
+
+GLPI refuses a relative logout URL, so write it with any one of the instance's domains. Apache
+replaces both domains in it with the one the browser is on (see `seconv-oidc/provider.inc`), so
+logging out from any domain ends the session on that domain and comes back to it. Zitadel
+answers `post_logout_redirect_uri invalid` for a domain whose post logout URI is missing from
+step 1.
 
 In **Configurar > Autenticação > Configuração**, leave "Automatically add users from an external
 authentication source" enabled so a first login creates the account. New accounts get the default
