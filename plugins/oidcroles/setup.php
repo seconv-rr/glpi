@@ -36,30 +36,36 @@ use Glpi\Plugin\Hooks;
 const PLUGIN_OIDCROLES_VERSION = '1.0.0';
 
 /**
- * Zitadel role key => id of the GLPI profile it grants (Administração > Perfis).
+ * Profile key => id of the GLPI profile it stands for (Administração > Perfis).
+ *
+ * A Zitadel role is a profile key, optionally followed by a dot and the id of an
+ * entity (Administração > Entidades): `tecnico` grants Técnico on the root entity,
+ * `tecnico.12` grants it on entity 12. Either way the profile covers the entity's
+ * children too. A role whose key is not listed here grants nothing.
  *
  * Ids rather than names: the profiles of this instance were renamed once already,
- * and a rename must not cut anybody's access. A role that is not listed here grants
- * nothing.
+ * and a rename must not cut anybody's access.
+ *
+ * The order matters for one thing: a user whose default profile (their preferences)
+ * is not one they hold anymore lands on the first profile of this list they got
+ * from a role.
  */
 const PLUGIN_OIDCROLES_PROFILES = [
-    'padrao'      => 1, // Padrão
-    'observador'  => 2, // Observador
-    'admin'       => 3, // Admin
     'super-admin' => 4, // Super-Admin
-    'atendente'   => 5, // Atendente
-    'tecnico'     => 6, // Técnico
+    'admin'       => 3, // Admin
     'supervisor'  => 7, // Supervisor
-    'leitor'      => 8, // Leitor
+    'tecnico'     => 6, // Técnico
+    'atendente'   => 5, // Atendente
     'prioridade'  => 9, // Prioridade
+    'observador'  => 2, // Observador
+    'leitor'      => 8, // Leitor
+    'padrao'      => 1, // Padrão
 ];
 
 /**
- * Where the profiles are granted. A Zitadel role says nothing about entities, so
- * every one of them applies to the root entity and everything below it.
+ * How a role key splits into a profile key and an optional entity id.
  */
-const PLUGIN_OIDCROLES_ENTITY = 0;
-const PLUGIN_OIDCROLES_RECURSIVE = 1;
+const PLUGIN_OIDCROLES_ROLE_PATTERN = '/^(?<profile>[^.]+)(?:\.(?<entity>\d+))?$/';
 
 /**
  * The server variable mod_auth_openidc leaves the roles claim in.
@@ -100,33 +106,31 @@ function plugin_oidcroles_grant_profiles(User $user): void
         return;
     }
 
-    $roles = plugin_oidcroles_roles_from_request();
+    $roles       = plugin_oidcroles_roles_from_request();
+    $role_rights = array_filter(array_map(plugin_oidcroles_right_for_role(...), $roles));
 
-    // No claim at all means Zitadel is not sending roles (the project setting is off), which
-    // is not the same as a user without roles. GLPI then does what it would without the plugin.
-    if ($roles === null) {
-        return;
-    }
-
-    $rights = [];
-    foreach (array_intersect_key(PLUGIN_OIDCROLES_PROFILES, array_flip($roles)) as $profiles_id) {
-        $rights[] = [PLUGIN_OIDCROLES_ENTITY, $profiles_id, PLUGIN_OIDCROLES_RECURSIVE];
-    }
-
-    if ($rights === []) {
+    $ignored = array_diff_key($roles, $role_rights);
+    if ($ignored !== []) {
         trigger_error(
             sprintf(
-                'Plugin oidcroles: none of the Zitadel roles %s of "%s" maps to a profile.',
-                json_encode($roles),
+                'Plugin oidcroles: the Zitadel roles %s of "%s" grant nothing (unknown profile key or entity).',
+                json_encode(array_values($ignored)),
                 $user->input['name'] ?? ''
             ),
             E_USER_WARNING
         );
     }
 
-    // Set even when empty: Zitadel answered, so the dynamic profiles follow it, and a user
-    // whose roles grant nothing ends up with none. Rights from a matched authorization
-    // rule are already in here and are kept.
+    // Everyone who logs in through Zitadel gets the default profile on every entity,
+    // whatever their roles. GLPI's own fallback only gives it on the root entity alone
+    // (User::post_addItem(), src/User.php:1045), and only to an account without rights.
+    $rights  = array_values($role_rights);
+    $default = Profile::getDefault();
+    if ($default > 0) {
+        $rights[] = [0, $default, 1];
+    }
+
+    // Rights from a matched authorization rule are already in here and are kept.
     $user->input['_ldap_rules']['rules_entities_rights'] = array_merge(
         $user->input['_ldap_rules']['rules_entities_rights'] ?? [],
         $rights
@@ -136,20 +140,71 @@ function plugin_oidcroles_grant_profiles(User $user): void
     // returns before them when no "SSO field" is mapped in the authentication settings
     // (src/User.php:2825). Without the flag applyRightRules() ignores the input above.
     $user->willProcessRuleRight();
+
+    plugin_oidcroles_pick_default_profile($user, $rights);
 }
 
 /**
- * The role keys Zitadel sent for the current request, or null when it sent no roles claim.
+ * The [entity, profile, recursive] right a role grants, or null when it grants nothing.
+ *
+ * @return array{int, int, int}|null
+ */
+function plugin_oidcroles_right_for_role(string $role): ?array
+{
+    if (preg_match(PLUGIN_OIDCROLES_ROLE_PATTERN, $role, $matches) !== 1) {
+        return null;
+    }
+
+    $profiles_id = PLUGIN_OIDCROLES_PROFILES[$matches['profile']] ?? null;
+    if ($profiles_id === null) {
+        return null;
+    }
+
+    // A role naming an entity that does not exist (deleted, or a typo in Zitadel) would
+    // leave a row pointing at nothing.
+    $entities_id = (int) ($matches['entity'] ?? 0);
+    if ($entities_id !== 0 && countElementsInTable(Entity::getTable(), ['id' => $entities_id]) === 0) {
+        return null;
+    }
+
+    return [$entities_id, $profiles_id, 1];
+}
+
+/**
+ * Point the user's default profile at their most important role.
+ *
+ * GLPI opens the session on the user's default profile and, when there is none, on the
+ * first one in alphabetical order (Session::init(), src/Session.php:222). With the
+ * default profile granted to everybody, that would open almost every session on
+ * Padrão. A default profile the user still holds is theirs to keep.
+ *
+ * @param list<array{int, int, int}> $rights
+ */
+function plugin_oidcroles_pick_default_profile(User $user, array $rights): void
+{
+    $granted = array_column($rights, 1);
+    if (in_array((int) ($user->input['profiles_id'] ?? 0), $granted, true)) {
+        return;
+    }
+
+    $preferred = current(array_intersect(PLUGIN_OIDCROLES_PROFILES, $granted));
+    if ($preferred !== false) {
+        $user->input['profiles_id'] = $preferred;
+    }
+}
+
+/**
+ * The role keys Zitadel sent for the current request, none when it sent no roles claim.
  *
  * The claim is an object keyed by role, `{"admin": {"<org id>": "<org domain>"}}`, which the
  * module passes on as JSON. Zitadel's documentation also shows it as a list of such objects,
  * so both shapes are read.
  *
- * @return list<string>|null
+ * @return list<string>
  */
-function plugin_oidcroles_roles_from_request(): ?array
+function plugin_oidcroles_roles_from_request(): array
 {
-    $roles = null;
+    $roles = [];
 
     foreach ($_SERVER as $name => $value) {
         if (!is_string($value) || preg_match(PLUGIN_OIDCROLES_CLAIM_PATTERN, (string) $name) !== 1) {
@@ -162,10 +217,10 @@ function plugin_oidcroles_roles_from_request(): ?array
         }
 
         $by_role = array_is_list($claim) ? array_filter($claim, is_array(...)) : [$claim];
-        $roles   = array_merge($roles ?? [], ...array_map(array_keys(...), array_values($by_role)));
+        $roles   = array_merge($roles, ...array_map(array_keys(...), array_values($by_role)));
     }
 
-    return $roles === null ? null : array_map(strval(...), $roles);
+    return array_values(array_unique(array_map(strval(...), $roles)));
 }
 
 /**
