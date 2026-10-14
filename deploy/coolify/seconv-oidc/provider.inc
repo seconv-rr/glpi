@@ -28,3 +28,9 @@ OIDCXForwardedHeaders X-Forwarded-Host X-Forwarded-Proto
 # The claim that becomes the GLPI login. Zitadel's preferred_username is the login name,
 # which may carry an @domain suffix; GLPI can strip it ("Remove the domain of logins").
 OIDCRemoteUserClaim preferred_username
+
+# Every claim reaches PHP twice: as a request header (HTTP_OIDC_CLAIM_..., what the GLPI
+# authentication settings read) and as an environment variable (OIDC_CLAIM_...). The oidcroles
+# plugin reads the roles from the environment copy, which no client can send. "both" is the
+# module's default today; it is spelled out because the plugin stops working without it.
+OIDCPassClaimsAs both

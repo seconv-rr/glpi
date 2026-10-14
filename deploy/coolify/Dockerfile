@@ -75,6 +75,13 @@ COPY --chown=www-data:www-data plugins/profilecondition /var/www/glpi/plugins/pr
 # is how a helpdesk home in one entity can offer the catalog of another. See its README.
 COPY --chown=www-data:www-data plugins/entitycatalog /var/www/glpi/plugins/entitycatalog
 
+# GLPI's authorization rules cannot read anything the identity provider sends besides the login
+# and the e-mail (src/RuleRightCollection.php:111), so a Zitadel role can never pick a profile
+# natively. This plugin reads the roles claim mod_auth_openidc leaves in the request and grants
+# the matching profiles on every single sign-on login. It does nothing for local logins or while
+# SECONV_OIDC is unset. See its README.
+COPY --chown=www-data:www-data plugins/oidcroles /var/www/glpi/plugins/oidcroles
+
 # Both ways the branding above can stop working are silent: a GLPI release that adds or renames
 # a logo leaves a file the COPY never touched, and one that moves $CFG_GLPI['app_name'] leaves
 # plugins/appname a no-op with the tab title back to "GLPI". Nothing errors at runtime, so a

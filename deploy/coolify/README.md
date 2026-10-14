@@ -1,8 +1,8 @@
 # Deploying to Coolify
 
 `Dockerfile` here is the whole build: the official `glpi/glpi` image with the SECONV-RR logos
-copied over GLPI's own and this repository's `appname`, `defaultlang` and `profilecondition`
-plugins bundled in.
+copied over GLPI's own and this repository's `appname`, `defaultlang`, `profilecondition`,
+`entitycatalog` and `oidcroles` plugins bundled in.
 Nothing is compiled, so the build is a few seconds.
 
 `verify-branding.sh` runs as the last build step and fails the build when the branding has
@@ -84,6 +84,9 @@ php bin/console plugin:activate profilecondition
 
 php bin/console plugin:install --username=glpi entitycatalog
 php bin/console plugin:activate entitycatalog
+
+php bin/console plugin:install --username=glpi oidcroles
+php bin/console plugin:activate oidcroles
 ```
 
 `appname` sets `$CFG_GLPI['app_name']` to `SECONV-RR`, which drives the browser tab title, the
@@ -205,6 +208,10 @@ sent as well). Register one pair of URIs for each domain the instance answers on
 
 Keep the client ID and the client secret.
 
+To have Zitadel roles pick the GLPI profile, also enable **Assert Roles on Authentication** in
+the project's general settings and create the roles listed in
+[Profiles from Zitadel roles](#profiles-from-zitadel-roles).
+
 ### 2. GLPI
 
 With `optional` the order does not matter, since the local form stays. Before `on`, make sure at
@@ -230,7 +237,32 @@ In **Configurar > Autenticação > Outros métodos de autenticação**:
 In **Configurar > Autenticação > Configuração**, leave "Automatically add users from an external
 authentication source" enabled so a first login creates the account. New accounts get the default
 profile unless a rule in **Administração > Regras > Regras para atribuir autorizações a um
-usuário** says otherwise.
+usuário** says otherwise, or Zitadel sends roles (next section).
+
+### Profiles from Zitadel roles
+
+The `oidcroles` plugin gives each user the profiles that match their Zitadel roles, at every
+login through Zitadel:
+
+| Zitadel role key | GLPI profile |
+| --- | --- |
+| `padrao` | Padrão |
+| `observador` | Observador |
+| `admin` | Admin |
+| `super-admin` | Super-Admin |
+| `atendente` | Atendente |
+| `tecnico` | Técnico |
+| `supervisor` | Supervisor |
+| `leitor` | Leitor |
+| `prioridade` | Prioridade |
+
+A user with several roles gets several profiles. Taking a role away in Zitadel takes the profile
+away at the next login. Profiles assigned by hand in GLPI are never touched, so a Super-Admin
+set that way keeps it whatever Zitadel says.
+
+Before switching to `SECONV_OIDC=on`, give the `super-admin` role to at least one Zitadel
+account and log in with it once. The map and the rest of the behaviour are in
+`plugins/oidcroles/README.md`.
 
 ### 3. Coolify
 
