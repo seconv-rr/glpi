@@ -241,24 +241,20 @@ usuário** says otherwise, or Zitadel sends roles (next section).
 
 ### Profiles from Zitadel roles
 
-The `oidcroles` plugin gives each user the profiles that match their Zitadel roles, at every
-login through Zitadel:
+The `oidcroles` plugin sets each user's profiles from their Zitadel roles, at every login
+through Zitadel. A role is a profile key, optionally followed by a dot and an entity id:
 
-| Zitadel role key | GLPI profile |
+| Zitadel role | Grants |
 | --- | --- |
-| `padrao` | Padrão |
-| `observador` | Observador |
-| `admin` | Admin |
-| `super-admin` | Super-Admin |
-| `atendente` | Atendente |
-| `tecnico` | Técnico |
-| `supervisor` | Supervisor |
-| `leitor` | Leitor |
-| `prioridade` | Prioridade |
+| `tecnico` | Técnico on the root entity and every entity below it |
+| `tecnico.12` | Técnico on entity 12 and the entities below it |
 
-A user with several roles gets several profiles. Taking a role away in Zitadel takes the profile
-away at the next login. Profiles assigned by hand in GLPI are never touched, so a Super-Admin
-set that way keeps it whatever Zitadel says.
+The profile keys are `super-admin`, `admin`, `supervisor`, `tecnico`, `atendente`, `prioridade`,
+`observador`, `leitor` and `padrao`. Everyone who logs in through Zitadel also gets the default
+profile (Padrão) on every entity, with or without roles.
+
+Taking a role away in Zitadel takes the profile away at the next login. Profiles assigned by
+hand in GLPI are never touched, so a Super-Admin set that way keeps it whatever Zitadel says.
 
 Before switching to `SECONV_OIDC=on`, give the `super-admin` role to at least one Zitadel
 account and log in with it once. The map and the rest of the behaviour are in
