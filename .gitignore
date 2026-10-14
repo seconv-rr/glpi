@@ -9,6 +9,7 @@
 !/plugins/defaultlang
 !/plugins/profilecondition
 !/plugins/entitycatalog
+!/plugins/oidcroles
 /files/*/*
 !/files/*/.gitkeep
 /.buildpath
