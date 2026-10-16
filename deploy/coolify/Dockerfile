@@ -9,9 +9,9 @@
 #   Dockerfile         /deploy/coolify/Dockerfile
 #
 # Pin the patch version deliberately. The GLPI project rebuilds each tag periodically to
-# pick up Debian/PHP security fixes without changing application code, so `11.0.8` keeps
-# receiving those while never moving to 11.0.9 on its own.
-FROM glpi/glpi:11.0.8
+# pick up Debian/PHP security fixes without changing application code, so `11.0.11` keeps
+# receiving those while never moving to 11.0.12 on its own.
+FROM glpi/glpi:11.0.11
 
 # Neither mod_headers nor mod_expires is enabled in the base image, so nothing it serves
 # carries a Cache-Control. Enabling the module and dropping the config in needs root; the

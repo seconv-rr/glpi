@@ -18,8 +18,8 @@ would work. It is the wrong trade here for two reasons:
 
 - This fork carries no changes to GLPI itself — the branding lives entirely in `branding/`.
   Building the source costs composer, npm and locale compilation for an identical result.
-- `11.0/bugfixes` is upstream's *development* branch for the next patch. `version/` says 11.0.9,
-  which is unreleased; the newest published image is 11.0.8. Production should track releases.
+- `11.0/bugfixes` is upstream's *development* branch: `version/` always names the next patch,
+  which is not released yet. Production should track the published images.
 
 Switch to building the fork only once there are real patches to GLPI's own code. The command is:
 
